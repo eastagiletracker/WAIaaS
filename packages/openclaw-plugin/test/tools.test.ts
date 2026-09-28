@@ -145,18 +145,44 @@ describe('defi tools', () => {
       action: 'swap', provider: 'jupiter', params: { from: 'SOL' },
       wallet_id: 'w1', network: 'solana-mainnet',
     });
+    expect(calledUrl(f)).toBe('http://localhost:3100/v1/actions/jupiter/swap');
     const body = parsedBody(f);
-    expect(body['walletId']).toBe('w1');
-    expect(body['network']).toBe('solana-mainnet');
+    expect(body).toEqual({ params: { from: 'SOL' }, walletId: 'w1', network: 'solana-mainnet' });
   });
 
   it('execute_action without optional wallet_id/network', async () => {
     const f = okFetch({});
     const { tool } = setup(f);
     await tool('execute_action').handler({ action: 'stake', provider: 'lido', params: {} });
+    expect(calledUrl(f)).toBe('http://localhost:3100/v1/actions/lido/stake');
     const body = parsedBody(f);
     expect(body['walletId']).toBeUndefined();
     expect(body['network']).toBeUndefined();
+  });
+
+  it('execute_action defaults params to {} when omitted', async () => {
+    const f = okFetch({});
+    const { tool } = setup(f);
+    await tool('execute_action').handler({ action: 'stake', provider: 'lido' });
+    expect(parsedBody(f)).toEqual({ params: {} });
+  });
+
+  it('execute_action encodes provider and action as single path segments', async () => {
+    const f = okFetch({});
+    const { tool } = setup(f);
+    await tool('execute_action').handler({ action: 'a/b?x=1', provider: '../admin', params: {} });
+    expect(calledUrl(f)).toBe('http://localhost:3100/v1/actions/..%2Fadmin/a%2Fb%3Fx%3D1');
+  });
+
+  it('execute_action surfaces daemon errors', async () => {
+    const f = errFetch(404, 'Action not found');
+    const { tool } = setup(f);
+    const result = await tool('execute_action').handler({
+      action: 'nope',
+      provider: 'lido',
+      params: {},
+    });
+    expect(result).toEqual({ error: 'Action not found', status: 404 });
   });
 
   it('get_defi_positions with wallet_id', async () => {

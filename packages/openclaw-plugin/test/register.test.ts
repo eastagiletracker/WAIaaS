@@ -143,7 +143,7 @@ describe('execute_action handler', () => {
     vi.restoreAllMocks();
   });
 
-  it('calls POST /v1/actions/execute with action/provider/params', async () => {
+  it('calls POST /v1/actions/:provider/:action with params in the body', async () => {
     const { api, tools } = createMockApi();
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -159,10 +159,10 @@ describe('execute_action handler', () => {
 
     expect(mockFetch).toHaveBeenCalledOnce();
     const [url, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('/v1/actions/execute');
+    expect(url).toBe('http://localhost:3100/v1/actions/jupiter/swap');
+    expect(opts.method).toBe('POST');
     const body = JSON.parse(opts.body as string) as Record<string, unknown>;
-    expect(body['action']).toBe('swap');
-    expect(body['provider']).toBe('jupiter');
+    expect(body).toEqual({ params: { fromToken: 'SOL', toToken: 'USDC', amount: '1000000000' } });
 
     vi.unstubAllGlobals();
   });

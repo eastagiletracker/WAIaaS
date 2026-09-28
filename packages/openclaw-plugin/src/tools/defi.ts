@@ -23,14 +23,17 @@ export function registerDefiTools(api: PluginApi, client: WAIaaSPluginClient): v
       required: ['action', 'provider', 'params'],
     },
     handler: async (args) => {
+      // The daemon addresses actions by path (POST /v1/actions/:provider/:action),
+      // the same route the SDK and MCP server call. Encode both segments so a
+      // name can never step outside its own path segment.
+      const provider = encodeURIComponent(String(args['provider']));
+      const action = encodeURIComponent(String(args['action']));
       const body: Record<string, unknown> = {
-        action: args['action'],
-        provider: args['provider'],
         params: args['params'] ?? {},
       };
       if (args['wallet_id']) body['walletId'] = args['wallet_id'];
       if (args['network']) body['network'] = args['network'];
-      const result = await client.post('/v1/actions/execute', body);
+      const result = await client.post(`/v1/actions/${provider}/${action}`, body);
       return toResult(result);
     },
   });
